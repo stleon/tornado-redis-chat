@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Чат</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="shortcut icon" href="/favicon.ico">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <style>
+      html { background: transparent }
+      body { background: #343638; color:white;}
+      .modal-content { background-color: #343638;}
+      .push-to-bottom { } /* position:fixed; bottom:0; */
+    </style>
+  </head>
+<body>
+
+<div class="container-fluid">
+
+<div class="row">
+  <div class="col-md-2">
+    <h3 id="public_header">Общий чат</h3>
+    <div id="public">
+      <div id="public_input" style="display:none;">
+        <button id="public_message_close" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4>Введите сообщение</h4>
+        <textarea id="public_message" class="form-control" rows="3"></textarea>
+        <p id="public_message_charactersLeft" class="text-right">{{message_len}}</p>
+        <p><kbd><kbd>Enter</kbd> + <kbd>,</kbd></kbd> чтобы отправить</p>
+      </div>
+      <button id="public_write" type="button" class="btn btn-primary btn-lg btn-block"><span class="glyphicon glyphicon-globe" aria-hidden="true"></span> Написать всем</button>
+      <br>
+      <div id="public_messages"></div>
+
+      <p><button id="public_clear" type="button" class="btn btn-primary btn-lg btn-block push-to-bottom"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Очистить</button></p>
+
+      <p><button id="public_unsubscribe" type="button" class="btn btn-danger btn-lg btn-block push-to-bottom"><span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span> Отписаться</button></p>
+    </div>
+
+    <div id="public_subscribe" style="display:none;">
+      <p><input type="number" id="channel_number" class="form-control" value="1"></p>
+      <p><button id="public_subscribe_button" type="button" class="btn btn-success btn-lg btn-block push-to-bottom"><span class="glyphicon glyphicon-remove-sign" aria-hidden="true"></span> Подписаться</button></p>
+    </div>
+
+
+
+
+
+  </div>
+
+
+  <div class="col-md-2">.col-md-1</div>
+  <div class="col-md-2">.col-md-1</div>
+  <div class="col-md-2">.col-md-1</div>
+  <div class="col-md-2">.col-md-1</div>
+  <div class="col-md-2">
+    <h3><span class="glyphicon glyphicon-envelope" aria-hidden="true"></span> Личные сообщения</h3>
+    <div id="direct_input" style="display:none;">
+        <button id="direct_message_close" type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4>Введите получателя</h4>
+        <div class="input-group">
+          <span class="input-group-addon" id="sizing-addon2">@</span>
+          <input id="to_user" type="text" class="form-control" placeholder="Имя пользователя" aria-describedby="sizing-addon2">
+        </div>
+
+        <h4>Введите сообщение</h4>
+        <textarea id="direct_message" class="form-control" rows="3"></textarea>
+        <p id="direct_message_charactersLeft" class="text-right">{{message_len}}</p>
+        <p><kbd><kbd>Enter</kbd> + <kbd>,</kbd></kbd> чтобы отправить</p>
+      </div>
+    <button id="send_direct_message" type="button" class="btn btn-primary btn-lg btn-block"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span> Написать</button>
+
+
+
+    <br>
+    <div id="direct_messages"></div>
+
+  </div>
+</div>
+
+
+
+
+
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script src="https://zurb.com/playground/uploads/upload/upload/5/jquery.textchange.min.js"></script>
+
+<script language="javascript">
+
+var ws = new WebSocket("wss://{{host}}:{{port}}/websocket");
+
+var time_formatter = function(time_string){
+  // возвращет строку с временем в нужном формате
+  if (time_string) {
+    var time = new Date(time_string);
+  }
+  else {
+    var time = new Date();
+  }
+
+  return time.getHours()+':'+time.getMinutes()+':'+time.getSeconds()
+};
+
+
+$(document).ready(function() {
+  $("#public_write").click(function() {
+    $("#public_write").hide();
+    $("#public_input").show();
+    $('#public_message').bind('textchange', function (event, previousText) {
+      $('#public_message_charactersLeft').html({{message_len}} - parseInt($(this).val().length) );
+      });
+    $('#direct_message').bind('textchange', function (event, previousText) {
+      $('#direct_message_charactersLeft').html({{message_len}} - parseInt($(this).val().length) );
+      });
+
+  });
+  $("#public_message_close").click(function() {
+    $("#public_input").hide();
+    $("#public_write").show();
+  });
+  $("#public_clear").click(function() {
+    $("#public_messages").empty();
+
+  });
+    $("#public_message").keypress(function() {
+    // при нажатии на Enter добавляем в textarea
+    if ( event.which == 13 ) {
+
+      var public_message = $('#public_message').val().trim();
+      if (public_message.length <= {{message_len}} && public_message.length !== 0 ) {
+        $("#public_messages").prepend('<p>' + time_formatter() + ' Я: ' + public_message, '</p>');
+        var msg = {
+          type: 'send_message', 
+          data: {
+            channel_id: 1,
+            text: public_message,
+          }};
+        ws.send(JSON.stringify(msg));
+        $('#public_message').val('');
+      }
+    }
+        
+  });
+
+  $('#public_unsubscribe').click(function() {
+    $("#public").hide();
+    $('#public_header').text('№ Канала');
+    var unjoin = {
+      type: 'unjoin',
+      data: {
+        channel_id: '1'
+      }
+    }
+    ws.send(JSON.stringify(unjoin));
+    $('#public_subscribe').show();
+  });
+
+  $('#public_subscribe_button').click(function() {
+    $('#public_subscribe').hide();
+    var channel_number = $('#channel_number').val();
+    var join = {
+      type: 'join',
+      data: {
+        channel_id: channel_number
+      }
+    }
+    ws.send(JSON.stringify(join));
+    $('#public_header').text('Канал № ' + channel_number);
+    $('#public').show();
+
+  });
+  
+
+  $('#send_direct_message').click(function(){
+    $('#send_direct_message').hide();
+    $('#direct_input').show();
+    $(".newest").hide();
+    $(".history").hide();
+
+  });
+
+$("#direct_message_close").click(function() {
+    $("#direct_input").hide();
+    $("#send_direct_message").show();
+    $(".newest").show();
+    $(".history").hide();
+  });
+
+  $("#direct_message").keypress(function() {
+    // при нажатии на Enter добавляем в textarea
+    if ( event.which == 13 ) {
+
+      var direct_message = $('#direct_message').val().trim();
+      if (direct_message.length <= {{message_len}} && direct_message.length !== 0 ) {
+        var to_user = $('#to_user').val().trim();
+
+        if (!($('#from_'+to_user+'_history').length)){
+          $('#direct_messages').append('<div id="from_'+to_user+'_history" class="history"></div>');
+        }
+        var $div_from_history = $('#from_'+to_user+'_history');
+        $div_from_history.prepend('<p>' + 'Я: ' + time_formatter() + ' - ' + direct_message + '</p>');
+
+        if (!($('#from_'+to_user+'_newest').length)){
+          $('#direct_messages').append('<div id="from_'+to_user+'_newest" class="newest" style="display:none;"></div>');
+        }
+        var $div_from_newest = $('#from_'+to_user+'_newest');
+        $div_from_newest.html('<p>' + 'Я: ' + time_formatter() + ' - ' + direct_message + '</p>');
+
+
+        var msg = {
+          type: 'send_private_message', 
+          data: {
+            to_user: to_user,
+            text: direct_message
+          }};
+        ws.send(JSON.stringify(msg));
+        $('#direct_message').val('');
+      }
+    }
+        
+  });
+
+
+	
+	ws.onopen = function() {
+		//ws.send("Hello, world");
+	};
+	ws.onmessage = function (evt) {
+    response_message = JSON.parse((evt.data));
+    console.log(response_message)
+    // Проверяем, совпадают ли протоколы при первом соединении
+    if (response_message["type"] == 'welcome' && response_message["data"]["protocol_v"]=={{protocol_v}}) {
+      $("#public_messages").prepend('<p>' + time_formatter() + ' Сервер: Соединение успешно установлено!</p>');
+    }
+    else if (response_message["type"] == 'welcome' && response_message["data"]["protocol_v"] != {{protocol_v}}){
+      ws.close();
+    }
+    else if (response_message["type"] == 'send_message') {
+      // не указываем канал, в какой вставляем - нужна привязка по id для блоков
+      $("#public_messages").prepend('<p>' + time_formatter() + ' ' + response_message['data']['author']['name'] + ': ' + response_message['data']['text'], '</p>');
+    }
+    else if (response_message["type"] == 'send_private_message') {
+      var $div_from_newest = $('#from_'+response_message["data"]["author"]['id']+'_newest');
+      if (!($div_from_newest.length)){
+        $('#direct_messages').append('<div id="from_'+response_message["data"]["author"]["id"]+'_newest"></div>');
+      }
+      
+      $div_from_newest.html('<p>' + response_message["data"]["author"]['name'] + ': ' + time_formatter() + ' - ' + response_message["data"]['text'] + '</p>');
+
+
+    }
+
+	};
+
+
+
+
+
+
+
+});
+
+	</script>
+  </body>
+</html>
