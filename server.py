@@ -10,14 +10,15 @@ from tornado.escape import native_str
 import json
 import hashlib
 
-HOST = '127.0.0.1'
+DEBUG = True
+HOST = '127.0.0.1' if DEBUG else 'redis'
 PORT = 8888
 REDIS_PORT = 6379
 COOKIE_NAME = 'user'
 MAX_MESSAGE_LEN = 255
 PROTOCOL_V = 0.1
 
-c = tornadoredis.Client()
+c = tornadoredis.Client(host=HOST)
 c.connect()
 
 
@@ -291,7 +292,7 @@ def make_app():
         'static_path': os.path.join(os.path.dirname(__file__), "static"),
         'cookie_secret': "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
         'xsrf_cookies': True,
-        'debug': False,
+        'debug': DEBUG,
     }
 
     return Application(handlers=[
