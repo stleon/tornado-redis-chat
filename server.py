@@ -10,15 +10,16 @@ from tornado.escape import native_str
 import json
 import hashlib
 
-DEBUG = True
-HOST = '127.0.0.1' if DEBUG else 'redis'
+DEBUG = False
+HOST = '192.168.59.103'
 PORT = 8888
+REDIS_HOST = '127.0.0.1' if DEBUG else 'redis'
 REDIS_PORT = 6379
 COOKIE_NAME = 'user'
 MAX_MESSAGE_LEN = 255
 PROTOCOL_V = 0.1
 
-c = tornadoredis.Client(host=HOST)
+c = tornadoredis.Client(host=REDIS_HOST)
 c.connect()
 
 
@@ -179,7 +180,7 @@ class ChatHandler(BaseClass, WebSocketHandler):
     @gen.coroutine
     def listen(self):
         "Слушаем новые сообщения и по умолчанию сразу подписываемся на общий чат + на его личный канал, в который ему будут приходить входящие"
-        self.client = tornadoredis.Client()
+        self.client = tornadoredis.Client(host=REDIS_HOST)
         self.client.connect()
         yield gen.Task(
             self.client.subscribe,

@@ -4,8 +4,9 @@ MAINTAINER LEON ST <leonst998@gmail.com>
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
-COPY static/ /usr/src/app
-COPY templates/ /usr/src/app
+COPY static/favicon.ico /usr/src/app/static/favicon.ico
+COPY templates/index.html /usr/src/app/templates/index.html
+COPY templates/login.html /usr/src/app/templates/login.html
 COPY server.py /usr/src/app/
 COPY requirements.txt /usr/src/app/
 
